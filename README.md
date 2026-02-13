@@ -49,6 +49,9 @@ const UserEntitySchema = z.object({
 type UserEntity = z.infer<typeof UserEntitySchema>
 ```
 
+**Note**: Optional table columns must be defined as nullable (and NOT optional).
+
+
 ## Defining a Repository
 
 ```ts
