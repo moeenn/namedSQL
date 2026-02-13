@@ -1,0 +1,42 @@
+{
+    "name": "sandbox",
+    "version": "0.0.1",
+    "type": "module",
+    "scripts": {
+        "start": "node --env-file=.env ./src/main.ts",
+        "fmt": "npx prettier --write ./src/",
+        "type-check": "npx tsc --noEmit",
+        "lint": "npx eslint --fix ./src/",
+        "check": "npm run type-check && npm run lint",
+        "build": "npx esbuild src/main.ts --bundle --outfile=dist/index.js --platform=node --format=esm --packages=external --minify",
+        "test": "node --test",
+        "db:migrate": "node-pg-migrate --envPath=.env up",
+        "db:migration": "node-pg-migrate create -j sql"
+    },
+    "prettier": {
+        "singleQuote": false,
+        "semi": false,
+        "tabWidth": 4,
+        "trailingComma": "all",
+        "printWidth": 100
+    },
+    "imports": {
+        "#src/*": "./src/*"
+    },
+    "devDependencies": {
+        "@types/node": "^24.2.0",
+        "@types/pg": "^8.16.0",
+        "dotenv": "^17.2.3",
+        "esbuild": "^0.27.0",
+        "eslint": "^9.32.0",
+        "node-pg-migrate": "^8.0.4",
+        "prettier": "^3.6.2",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.47.0"
+    },
+    "dependencies": {
+        "pg": "^8.16.3",
+        "zod": "^4.2.1"
+    }
+}
