@@ -1,13 +1,13 @@
 import assert from "node:assert/strict"
 import z from "zod"
 import { DatabaseError } from "pg"
-import { Database, type IDatabase } from "./database/database.ts"
+import { Database, type IDatabase } from "./database.ts"
 
 const UserEntitySchema = z.object({
     user_id: z.uuid(),
     email: z.email(),
     password: z.string(),
-    role: z.enum(["admin", "user"]),
+    role: z.enum(["ADMIN", "CUSTOMER"]),
     isActive: z.boolean(),
     created_at: z.date(),
     deleted_at: z.date().nullable(),
@@ -32,7 +32,7 @@ class UserRepo {
         values ($user_id, $email, $password, $role, $is_active, $created_at)
     `
 
-    async createUser(db: IDatabase, user: UserEntity) {
+    async createUser(db: IDatabase, user: UserEntity): Promise<void> {
         try {
             await db.namedQuery(this.#createUserQuery, user)
         } catch (err) {
@@ -46,12 +46,9 @@ class UserRepo {
         limit 1
     `
 
-    async findById(db: IDatabase, id: string): Promise<UserEntity | null> {
+    async findById(db: IDatabase, id: string): Promise<UserEntity | undefined> {
         const result = await db.namedQuery(this.#findByIdQuery, { id })
-        if (result.rowCount === 0) {
-            return null
-        }
-
+        if (result.rowCount === 0) return
         return UserEntitySchema.parse(result.rows[0])
     }
 
@@ -66,7 +63,7 @@ class UserRepo {
         where id = $user_id
     `
 
-    async updateUser(db: IDatabase, user: UserEntity) {
+    async updateUser(db: IDatabase, user: UserEntity): Promise<void> {
         try {
             await db.namedQuery(this.#updateUserQuery, user)
         } catch (err) {
@@ -95,7 +92,7 @@ async function main(): Promise<void> {
             user_id: crypto.randomUUID().toString(),
             email: "admin-two@site.com",
             password: "my-strong-hashed-password",
-            role: "admin",
+            role: "ADMIN",
             isActive: true,
             created_at: new Date(),
             deleted_at: null,
@@ -104,7 +101,7 @@ async function main(): Promise<void> {
             user_id: crypto.randomUUID().toString(),
             email: "user-three@site.com",
             password: "my-strong-hashed-password",
-            role: "user",
+            role: "CUSTOMER",
             isActive: true,
             created_at: new Date(),
             deleted_at: null,
