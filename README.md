@@ -172,3 +172,8 @@ $ npm run check
 # format code (using prettier)
 $ npm run fmt
 ```
+
+
+## TODO
+
+- [ ] Test array lookups on actual database.

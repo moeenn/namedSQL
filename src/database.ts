@@ -9,7 +9,7 @@ type NamedArgs = {
     [x: string]: Stringable | Date | null
 }
 
-type ParamType = string | null
+type ParamType = string | null | string[] | number[]
 
 export class NamedQueryResult {
     public readonly preparedQuery: string
@@ -30,14 +30,14 @@ export class MissingArgumentError extends Error {
     }
 }
 
-function namedArray(values: ParamType[], offset: number): string {
-    const pieces: string[] = []
-    for (let i = 0; i < values.length; i++) {
-        pieces.push(`$${offset + i}`)
-    }
-
-    return pieces.join(", ")
-}
+// function namedArray(values: ParamType[], offset: number): string {
+//     const pieces: string[] = []
+//     for (let i = 0; i < values.length; i++) {
+//         pieces.push(`$${offset + i}`)
+//     }
+//
+//     return pieces.join(", ")
+// }
 
 export function named(query: string, args: NamedArgs): NamedQueryResult {
     const params = [...query.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)].map((match) =>
@@ -54,13 +54,13 @@ export function named(query: string, args: NamedArgs): NamedQueryResult {
             throw new MissingArgumentError(param)
         }
 
-        if (Array.isArray(paramValue)) {
-            const replaceValue = namedArray(paramValue, idx)
-            query = query.replaceAll(`$${param}`, replaceValue)
-            paramArray.push(...paramValue.map((v) => v.toString()))
-            idx += paramValue.length
-            continue
-        }
+        // if (Array.isArray(paramValue)) {
+        //     const replaceValue = namedArray(paramValue, idx)
+        //     query = query.replaceAll(`$${param}`, replaceValue)
+        //     paramArray.push(...paramValue.map((v) => v.toString()))
+        //     idx += paramValue.length
+        //     continue
+        // }
 
         query = query.replaceAll(`$${param}`, `$${idx}`)
         if (paramValue === null) {
@@ -70,6 +70,8 @@ export function named(query: string, args: NamedArgs): NamedQueryResult {
         if (paramValue != null) {
             if (paramValue instanceof Date) {
                 paramArray.push(paramValue.toISOString())
+            } else if (Array.isArray(paramValue)) {
+                paramArray.push(paramValue)
             } else {
                 paramArray.push(paramValue.toString())
             }

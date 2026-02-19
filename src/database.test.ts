@@ -89,9 +89,9 @@ test("camelCase args", () => {
 })
 
 test("pass array as value", () => {
-    const inputQuery = `select * from users where id in ($ids) and role = $role`
-    const expectedQuery = `select * from users where id in ($1, $2, $3, $4) and role = $5`
-    const expectedParams = ["10", "20", "30", "40", "user"]
+    const inputQuery = `select * from users where id = any($ids) and role = $role`
+    const expectedQuery = `select * from users where id = any($1) and role = $2`
+    const expectedParams = [[10, 20, 30, 40], "user"]
 
     const got = named(inputQuery, { ids: [10, 20, 30, 40], role: "user" })
     assert.equal(got.preparedQuery, expectedQuery)
