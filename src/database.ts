@@ -9,7 +9,7 @@ type NamedArgs = {
     [x: string]: Stringable | Date | null
 }
 
-type ParamType = string | null | string[] | number[]
+type ParamType = number | number[] | string | string[] | null
 
 export class NamedQueryResult {
     public readonly preparedQuery: string
@@ -30,15 +30,6 @@ export class MissingArgumentError extends Error {
     }
 }
 
-// function namedArray(values: ParamType[], offset: number): string {
-//     const pieces: string[] = []
-//     for (let i = 0; i < values.length; i++) {
-//         pieces.push(`$${offset + i}`)
-//     }
-//
-//     return pieces.join(", ")
-// }
-
 export function named(query: string, args: NamedArgs): NamedQueryResult {
     const params = [...query.matchAll(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g)].map((match) =>
         match[0].slice(1),
@@ -54,21 +45,15 @@ export function named(query: string, args: NamedArgs): NamedQueryResult {
             throw new MissingArgumentError(param)
         }
 
-        // if (Array.isArray(paramValue)) {
-        //     const replaceValue = namedArray(paramValue, idx)
-        //     query = query.replaceAll(`$${param}`, replaceValue)
-        //     paramArray.push(...paramValue.map((v) => v.toString()))
-        //     idx += paramValue.length
-        //     continue
-        // }
-
         query = query.replaceAll(`$${param}`, `$${idx}`)
         if (paramValue === null) {
             paramArray.push(null)
         }
 
         if (paramValue != null) {
-            if (paramValue instanceof Date) {
+            if (typeof paramValue == "number") {
+                paramArray.push(paramValue)
+            } else if (paramValue instanceof Date) {
                 paramArray.push(paramValue.toISOString())
             } else if (Array.isArray(paramValue)) {
                 paramArray.push(paramValue)
@@ -83,12 +68,15 @@ export function named(query: string, args: NamedArgs): NamedQueryResult {
     return new NamedQueryResult(query.trim(), paramArray)
 }
 
-export interface IDatabase {
+export interface DbHandle {
+    // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-explicit-any
     query(query: string, values: any[]): Promise<QueryResult<any>>
+
+    // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-explicit-any
     namedQuery(query: string, args: NamedArgs): Promise<QueryResult<any>>
 }
 
-export class Transaction implements IDatabase {
+export class Transaction implements DbHandle {
     #client: PoolClient
 
     constructor(client: PoolClient) {
@@ -107,17 +95,19 @@ export class Transaction implements IDatabase {
         this.#client.release()
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     query(query: string, values: any[]): Promise<QueryResult<any>> {
         return this.#client.query(query, values)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     namedQuery(query: string, args: NamedArgs): Promise<QueryResult<any>> {
         const q = named(query, args)
         return this.#client.query(q.preparedQuery, q.params)
     }
 }
 
-export class Database implements IDatabase {
+export class Database implements DbHandle {
     #pool: Pool
 
     constructor(config: { url: string }) {
@@ -136,6 +126,7 @@ export class Database implements IDatabase {
         return this.#pool
     }
 
+    // eslint-disable-next-line no-unused-vars
     async transaction(callback: (tx: Transaction) => Promise<void>) {
         const handle = await this.#pool.connect()
         await handle.query("begin")
@@ -152,10 +143,12 @@ export class Database implements IDatabase {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async query(query: string, args: any[]): Promise<QueryResult<any>> {
         return await this.#pool.query(query, args)
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async namedQuery(query: string, args: NamedArgs): Promise<QueryResult<any>> {
         const q = named(query, args)
         return await this.#pool.query(q.preparedQuery, q.params)

@@ -47,6 +47,10 @@ const UserEntitySchema = z.object({
 })
 
 type UserEntity = z.infer<typeof UserEntitySchema>
+
+const PaginatedUsersSchema = UserEntitySchema.extend({
+    total_count: z.coerce.number(),
+})
 ```
 
 **Note**: Optional table columns must be defined as nullable (and NOT optional).
@@ -74,7 +78,7 @@ class UserRepo {
         values ($user_id, $email, $password, $role, $is_active, $created_at)
     `
 
-    async createUser(db: IDatabase, user: UserEntity): Promise<void> {
+    async createUser(db: DbHandle, user: UserEntity): Promise<void> {
         try {
             await db.namedQuery(this.#createUserQuery, user)
         } catch (err) {
@@ -88,10 +92,34 @@ class UserRepo {
         limit 1
     `
 
-    async findById(db: IDatabase, id: string): Promise<UserEntity | undefined> {
+    async findById(db: DbHandle, id: string): Promise<UserEntity | undefined> {
         const result = await db.namedQuery(this.#findByIdQuery, { id })
         if (result.rowCount === 0) return
         return UserEntitySchema.parse(result.rows[0])
+    }
+
+    #listUserQuery = `
+        select
+            u.*,
+            count(*) over() as total_count
+        from users u
+        where u.deleted_at is null
+        limit $limit
+        offset $offset
+    `
+
+    async listUsers(db: DbHandle, : number, offset: number): Promise<PaginatedResults<UserEntity>> {
+        const result = await db.namedQuery(this.#listUserQuery, { limit, offset })
+        if (result.rowCount == 0) {
+            return { total_count: 0, data: [] }
+        }
+
+        const total_count = result.rows[0].total_count
+        const data = await Promise.all(
+            result.rows.map(row => PaginatedUsersSchema.parseAsync(row))
+        )
+
+        return { total_count, data }
     }
 
     #updateUserQuery = `
@@ -105,7 +133,7 @@ class UserRepo {
         where id = $user_id
     `
 
-    async updateUser(db: IDatabase, user: UserEntity): Promise<void> {
+    async updateUser(db: DbHandle, user: UserEntity): Promise<void> {
         try {
             await db.namedQuery(this.#updateUserQuery, user)
         } catch (err) {
@@ -118,7 +146,7 @@ class UserRepo {
         where user_id = $user_id
     `
 
-    async deleteUser(db: IDatabase, id: string) {
+    async deleteUser(db: DbHandle, id: string) {
         await db.namedQuery(this.#deleteUserQuery, { id })
     }
 }
@@ -172,8 +200,3 @@ $ npm run check
 # format code (using prettier)
 $ npm run fmt
 ```
-
-
-## TODO
-
-- [ ] Test array lookups on actual database.

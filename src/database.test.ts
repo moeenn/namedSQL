@@ -38,7 +38,7 @@ test("repeated params", () => {
     }
 
     const expectedParams = [
-        inputParams.id.toString(),
+        inputParams.id,
         inputParams.name,
         inputParams.created_at.toISOString(),
     ]
@@ -81,7 +81,7 @@ test("camelCase args", () => {
     const expectedQuery = `insert into entity (id, full_name) values ($1, $2)`
 
     const inputEntity = new Entity(300, "Something Random")
-    const expectedParams = [inputEntity.id.toString(), inputEntity.fullName]
+    const expectedParams = [inputEntity.id, inputEntity.fullName]
 
     const got = named(inputQuery, { ...inputEntity })
     assert.equal(got.preparedQuery, expectedQuery)
@@ -101,7 +101,7 @@ test("pass array as value", () => {
 test("type-coersion in sql", () => {
     const inputQuery = `select u.* from users u where ($email::text is null or u.email = $email::text) and ($age::numeric is null or u.age = $age::numeric)`
     const expectedQuery = `select u.* from users u where ($1::text is null or u.email = $1::text) and ($2::numeric is null or u.age = $2::numeric)`
-    const expectedParams = ["samaple@site.com", "30"]
+    const expectedParams = ["samaple@site.com", 30]
 
     const got = named(inputQuery, { email: "samaple@site.com", age: 30 })
     assert.equal(got.preparedQuery, expectedQuery)
