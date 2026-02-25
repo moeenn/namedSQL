@@ -37,11 +37,7 @@ test("repeated params", () => {
         created_at: new Date(),
     }
 
-    const expectedParams = [
-        inputParams.id,
-        inputParams.name,
-        inputParams.created_at.toISOString(),
-    ]
+    const expectedParams = [inputParams.id, inputParams.name, inputParams.created_at.toISOString()]
 
     const got = named(input, inputParams)
     assert.equal(got.preparedQuery, expectedQuery)
@@ -104,6 +100,18 @@ test("type-coersion in sql", () => {
     const expectedParams = ["samaple@site.com", 30]
 
     const got = named(inputQuery, { email: "samaple@site.com", age: 30 })
+    assert.equal(got.preparedQuery, expectedQuery)
+    assert.deepEqual(got.params, expectedParams)
+})
+
+test("similarity in arg names", () => {
+    const inputQuery = `update user_profiles set country = $country, country_code = $country_code where user_id = $user_id`
+    const expectedQuery = `update user_profiles set country = $1, country_code = $2 where user_id = $3`
+
+    const inputParams = { user_id: 10, country: "Pakistan", country_code: "PK" }
+    const expectedParams = [inputParams.country, inputParams.country_code, inputParams.user_id]
+
+    const got = named(inputQuery, inputParams)
     assert.equal(got.preparedQuery, expectedQuery)
     assert.deepEqual(got.params, expectedParams)
 })

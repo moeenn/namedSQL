@@ -45,7 +45,12 @@ export function named(query: string, args: NamedArgs): NamedQueryResult {
             throw new MissingArgumentError(param)
         }
 
-        query = query.replaceAll(`$${param}`, `$${idx}`)
+        // match against param name - ending with white-space, EOL or special characters.
+        // this means if params are similar (e.g. country and country_code) they will
+        // be handled properly and not replaced blindly.
+        const replacePattern = new RegExp(`\\$${param}(?=\\W|$)`, "g")
+        query = query.replaceAll(replacePattern, `$${idx}`)
+
         if (paramValue === null) {
             paramArray.push(null)
         }
