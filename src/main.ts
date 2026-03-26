@@ -1,25 +1,54 @@
 import assert from "node:assert/strict"
-import z from "zod"
 import { Database, type DbHandle } from "./database.ts"
 
-const PlayerSchema = z.object({
-    player_id: z.number(),
-    name: z.string(),
-    score: z.number(),
-})
+type DateRange = {
+    start: Date,
+    end: Date,
+}
 
-type Player = z.infer<typeof PlayerSchema>
+function* loopWeeks(start: Date, end: Date): Generator<DateRange> {
+    const incrementDate = (d: Date, days: number) => {
+        const clone = new Date(d)
+        clone.setDate(clone.getDate() + days)
+        return clone
+    }
 
-class PlayerRepo {
-    #findPlayersQuery = `
-        select p.* from players p
-        where p.player_id = any($ids)
+    let s = new Date(start)
+    let e = incrementDate(s, 6)
+
+    while (e.valueOf() <= end.valueOf()) {
+        yield { start: s, end: e }
+        s = incrementDate(s, 7)
+        e = incrementDate(s, 6)
+    }
+}
+
+
+type Traffic = {
+    listing_id: number
+    week_start: Date
+    week_end: Date
+    our_traffic: number
+    market_traffic: number
+}
+
+async function addTraffic(db: DbHandle, args: Traffic) {
+    const query = `
+        insert into listing_weekly_traffic_stats (
+            listing_id, week_start, week_end, our_traffic, market_traffic
+        )
+        values (
+            $listing_id, $week_start, $week_end, $our_traffic, $market_traffic
+        )
     `
 
-    async findPlayers(db: DbHandle, ids: number[]): Promise<Player[]> {
-        const result = await db.namedQuery(this.#findPlayersQuery, { ids })
-        return Promise.all(result.rows.map((row) => PlayerSchema.parseAsync(row)))
-    }
+    await db.namedQuery(query, args)
+}
+
+function getRandomIntInclusive(min: number, max: number): number {
+  min = Math.ceil(min)
+  max = Math.floor(max)
+  return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
 async function main(): Promise<void> {
@@ -29,10 +58,19 @@ async function main(): Promise<void> {
     assert(await db.ping())
     console.log("-- connection established")
 
-    const playerRepo = new PlayerRepo()
-    const players = await playerRepo.findPlayers(db, [3, 4, 5])
-    for (const p of players) {
-        console.log(p)
+    const listingId = 404763 // 426603, 404763
+
+    let start = new Date("2024-12-29")
+    let end = new Date("2027-01-02")
+
+    for (let r of loopWeeks(start, end)) {
+        await addTraffic(db, {
+            listing_id: listingId,
+            week_start: r.start,
+            week_end: r.end,
+            our_traffic: getRandomIntInclusive(0, 5000),
+            market_traffic: getRandomIntInclusive(0, 5000),
+        })
     }
 
     await db.disconnect()
